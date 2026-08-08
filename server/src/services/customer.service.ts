@@ -1,6 +1,7 @@
 import prisma from '../config/prisma';
 import { CreateCustomerInput, UpdateCustomerInput, AddFollowUpInput } from '../validators/customer.validator';
 import { CustomerType, CustomerStatus } from '@prisma/client';
+import { AppError } from '../utils/appError';
 
 export class CustomerService {
   static async getAll(query: {
@@ -81,7 +82,7 @@ export class CustomerService {
     });
 
     if (!customer) {
-      throw { statusCode: 404, message: 'Customer not found' };
+      throw new AppError(404, 'Customer not found');
     }
 
     return customer;
@@ -106,7 +107,7 @@ export class CustomerService {
   static async update(id: string, data: UpdateCustomerInput) {
     const existing = await prisma.customer.findUnique({ where: { id } });
     if (!existing) {
-      throw { statusCode: 404, message: 'Customer not found' };
+      throw new AppError(404, 'Customer not found');
     }
 
     const updateData: any = { ...data };
@@ -123,7 +124,7 @@ export class CustomerService {
   static async delete(id: string) {
     const existing = await prisma.customer.findUnique({ where: { id } });
     if (!existing) {
-      throw { statusCode: 404, message: 'Customer not found' };
+      throw new AppError(404, 'Customer not found');
     }
 
     return prisma.customer.delete({ where: { id } });
@@ -132,7 +133,7 @@ export class CustomerService {
   static async addFollowUp(customerId: string, userId: string, data: AddFollowUpInput) {
     const customer = await prisma.customer.findUnique({ where: { id: customerId } });
     if (!customer) {
-      throw { statusCode: 404, message: 'Customer not found' };
+      throw new AppError(404, 'Customer not found');
     }
 
     const followUpDate = data.date ? new Date(data.date) : new Date();

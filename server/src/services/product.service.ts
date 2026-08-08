@@ -1,5 +1,6 @@
 import prisma from '../config/prisma';
 import { CreateProductInput, UpdateProductInput } from '../validators/product.validator';
+import { AppError } from '../utils/appError';
 
 export class ProductService {
   static async getAll(query: {
@@ -29,12 +30,6 @@ export class ProductService {
       ];
     }
 
-    if (query.lowStock === true || query.lowStock === 'true') {
-      where.currentStock = {
-        lte: prisma.product.fields ? undefined : undefined, // Will be filtered in JS if needed or using raw SQL, but in Prisma:
-      };
-    }
-
     const [total, products] = await Promise.all([
       prisma.product.count({ where }),
       prisma.product.findMany({
@@ -45,7 +40,6 @@ export class ProductService {
       }),
     ]);
 
-    // If low stock requested, filter products where currentStock <= minimumStock
     let resultProducts = products;
     if (query.lowStock === true || query.lowStock === 'true') {
       resultProducts = products.filter((p) => p.currentStock <= p.minimumStock);
@@ -77,7 +71,7 @@ export class ProductService {
     });
 
     if (!product) {
-      throw { statusCode: 404, message: 'Product not found' };
+      throw new AppError(404, 'Product not found');
     }
 
     return product;
@@ -89,7 +83,7 @@ export class ProductService {
     });
 
     if (existingSku) {
-      throw { statusCode: 400, message: `Product with SKU '${data.sku.toUpperCase()}' already exists` };
+      throw new AppError(400, `Product with SKU '${data.sku.toUpperCase()}' already exists`);
     }
 
     return prisma.product.create({
@@ -104,7 +98,7 @@ export class ProductService {
   static async update(id: string, data: UpdateProductInput) {
     const existing = await prisma.product.findUnique({ where: { id } });
     if (!existing) {
-      throw { statusCode: 404, message: 'Product not found' };
+      throw new AppError(404, 'Product not found');
     }
 
     if (data.sku && data.sku.toUpperCase() !== existing.sku) {
@@ -112,7 +106,7 @@ export class ProductService {
         where: { sku: data.sku.toUpperCase() },
       });
       if (skuCheck) {
-        throw { statusCode: 400, message: `Product with SKU '${data.sku.toUpperCase()}' already exists` };
+        throw new AppError(400, `Product with SKU '${data.sku.toUpperCase()}' already exists`);
       }
     }
 

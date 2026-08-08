@@ -1,11 +1,11 @@
 import prisma from '../config/prisma';
 import { CreateStockMovementInput } from '../validators/stock.validator';
-import { MovementType } from '@prisma/client';
+import { AppError } from '../utils/appError';
 
 export class StockService {
   static async getAll(query: {
     productId?: string;
-    movementType?: MovementType;
+    movementType?: 'IN' | 'OUT';
     page?: number;
     limit?: number;
   }) {
@@ -58,20 +58,22 @@ export class StockService {
         where: { id: data.productId },
       });
 
+      require('fs').appendFileSync('./debug.log', JSON.stringify({ product, data }) + '\n');
+
       if (!product) {
-        throw { statusCode: 404, message: 'Product not found' };
+        throw new AppError(404, 'Product not found');
       }
 
-      if (data.movementType === MovementType.OUT) {
+      if (data.movementType === 'OUT') {
         if (product.currentStock < data.quantity) {
-          throw {
-            statusCode: 400,
-            message: `Insufficient stock for product '${product.productName}'. Current stock: ${product.currentStock}, Requested reduction: ${data.quantity}`,
-          };
+          throw new AppError(
+            400,
+            `Insufficient stock for product '${product.productName}'. Current stock: ${product.currentStock}, Requested reduction: ${data.quantity}`
+          );
         }
       }
 
-      const stockDelta = data.movementType === MovementType.IN ? data.quantity : -data.quantity;
+      const stockDelta = data.movementType === 'IN' ? data.quantity : -data.quantity;
 
       const [updatedProduct, movement] = await Promise.all([
         tx.product.update({
@@ -86,7 +88,7 @@ export class StockService {
           data: {
             productId: data.productId,
             quantity: data.quantity,
-            movementType: data.movementType,
+            movementType: data.movementType as any,
             reason: data.reason,
             createdById: userId,
           },

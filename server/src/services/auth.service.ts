@@ -4,6 +4,7 @@ import prisma from '../config/prisma';
 import { env } from '../config/env';
 import { LoginInput } from '../validators/auth.validator';
 import { JwtPayload } from '../types/auth.types';
+import { AppError } from '../utils/appError';
 
 export class AuthService {
   static async login(data: LoginInput) {
@@ -12,12 +13,12 @@ export class AuthService {
     });
 
     if (!user) {
-      throw { statusCode: 401, message: 'Invalid credentials' };
+      throw new AppError(401, 'Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(data.password, user.passwordHash);
     if (!isPasswordValid) {
-      throw { statusCode: 401, message: 'Invalid credentials' };
+      throw new AppError(401, 'Invalid credentials');
     }
 
     const payload: JwtPayload = {
@@ -56,7 +57,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw { statusCode: 404, message: 'User not found' };
+      throw new AppError(404, 'User not found');
     }
 
     return user;
