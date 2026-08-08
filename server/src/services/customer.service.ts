@@ -1,6 +1,6 @@
 import prisma from '../config/prisma';
 import { CreateCustomerInput, UpdateCustomerInput, AddFollowUpInput } from '../validators/customer.validator';
-import { CustomerType, CustomerStatus } from '@prisma/client';
+import { CustomerType, CustomerStatus, Prisma } from '@prisma/client';
 import { AppError } from '../utils/appError';
 
 export class CustomerService {
@@ -15,7 +15,7 @@ export class CustomerService {
     const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.CustomerWhereInput = {};
 
     if (query.status) {
       where.status = query.status;
@@ -89,7 +89,10 @@ export class CustomerService {
   }
 
   static async create(data: CreateCustomerInput) {
-    const followUpDate = data.followUpDate ? new Date(data.followUpDate) : null;
+    let followUpDate: Date | null = null;
+    if (typeof data.followUpDate === 'string' && data.followUpDate.trim() !== '') {
+      followUpDate = new Date(data.followUpDate);
+    }
 
     return prisma.customer.create({
       data: {
@@ -110,9 +113,15 @@ export class CustomerService {
       throw new AppError(404, 'Customer not found');
     }
 
-    const updateData: any = { ...data };
-    if (data.followUpDate !== undefined) {
-      updateData.followUpDate = data.followUpDate ? new Date(data.followUpDate) : null;
+    const { followUpDate, ...rest } = data;
+    const updateData: Prisma.CustomerUpdateInput = { ...rest };
+
+    if (followUpDate !== undefined) {
+      if (typeof followUpDate === 'string' && followUpDate.trim() !== '') {
+        updateData.followUpDate = new Date(followUpDate);
+      } else {
+        updateData.followUpDate = null;
+      }
     }
 
     return prisma.customer.update({
@@ -136,7 +145,9 @@ export class CustomerService {
       throw new AppError(404, 'Customer not found');
     }
 
-    const followUpDate = data.date ? new Date(data.date) : new Date();
+    const followUpDate: Date = typeof data.date === 'string' && data.date.trim() !== ''
+      ? new Date(data.date)
+      : new Date();
 
     const [followUp] = await prisma.$transaction([
       prisma.followUp.create({

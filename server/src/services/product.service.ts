@@ -1,6 +1,7 @@
 import prisma from '../config/prisma';
 import { CreateProductInput, UpdateProductInput } from '../validators/product.validator';
 import { AppError } from '../utils/appError';
+import { Prisma } from '@prisma/client';
 
 export class ProductService {
   static async getAll(query: {
@@ -14,7 +15,7 @@ export class ProductService {
     const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.ProductWhereInput = {};
 
     if (query.category) {
       where.category = { equals: query.category, mode: 'insensitive' };

@@ -1,6 +1,7 @@
 import prisma from '../config/prisma';
 import { CreateStockMovementInput } from '../validators/stock.validator';
 import { AppError } from '../utils/appError';
+import { Prisma } from '@prisma/client';
 
 export class StockService {
   static async getAll(query: {
@@ -13,7 +14,7 @@ export class StockService {
     const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.StockMovementWhereInput = {};
 
     if (query.productId) {
       where.productId = query.productId;
@@ -57,8 +58,6 @@ export class StockService {
       const product = await tx.product.findUnique({
         where: { id: data.productId },
       });
-
-      require('fs').appendFileSync('./debug.log', JSON.stringify({ product, data }) + '\n');
 
       if (!product) {
         throw new AppError(404, 'Product not found');

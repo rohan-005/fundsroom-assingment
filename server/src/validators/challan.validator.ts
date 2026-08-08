@@ -10,7 +10,7 @@ export const challanItemSchema = z.object({
 export const createChallanSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
   items: z.array(challanItemSchema).min(1, 'At least one product item is required'),
-  status: z.enum([ChallanStatus.DRAFT, ChallanStatus.CONFIRMED]).default(ChallanStatus.DRAFT),
+  status: z.nativeEnum(ChallanStatus).default(ChallanStatus.DRAFT),
 });
 
 export const updateChallanSchema = z.object({

@@ -1,6 +1,7 @@
 import prisma from '../config/prisma';
 import { CreateChallanInput, UpdateChallanInput } from '../validators/challan.validator';
 import { AppError } from '../utils/appError';
+import { Prisma, ChallanStatus } from '@prisma/client';
 
 export class ChallanService {
   private static async generateChallanNumber(): Promise<string> {
@@ -21,7 +22,7 @@ export class ChallanService {
   }
 
   static async getAll(query: {
-    status?: string;
+    status?: ChallanStatus;
     customerId?: string;
     search?: string;
     page?: number;
@@ -31,7 +32,7 @@ export class ChallanService {
     const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.SalesChallanWhereInput = {};
 
     if (query.status) {
       where.status = query.status;
@@ -133,7 +134,7 @@ export class ChallanService {
 
     const challanNumber = await ChallanService.generateChallanNumber();
 
-    if (data.status === 'CONFIRMED') {
+    if (data.status === ChallanStatus.CONFIRMED) {
       return prisma.$transaction(async (tx) => {
         for (const item of itemsWithSnapshots) {
           const prod = await tx.product.findUnique({ where: { id: item.productId } });
@@ -168,7 +169,7 @@ export class ChallanService {
             challanNumber,
             customerId: data.customerId,
             totalQuantity,
-            status: 'CONFIRMED',
+            status: ChallanStatus.CONFIRMED,
             createdById: userId,
             items: {
               create: itemsWithSnapshots,
@@ -188,7 +189,7 @@ export class ChallanService {
         challanNumber,
         customerId: data.customerId,
         totalQuantity,
-        status: 'DRAFT',
+        status: ChallanStatus.DRAFT,
         createdById: userId,
         items: {
           create: itemsWithSnapshots,
@@ -213,11 +214,11 @@ export class ChallanService {
         throw new AppError(404, 'Sales Challan not found');
       }
 
-      if (challan.status === 'CONFIRMED') {
+      if (challan.status === ChallanStatus.CONFIRMED) {
         throw new AppError(400, 'Challan is already confirmed');
       }
 
-      if (challan.status === 'CANCELLED') {
+      if (challan.status === ChallanStatus.CANCELLED) {
         throw new AppError(400, 'Cannot confirm a cancelled challan');
       }
 
@@ -251,7 +252,7 @@ export class ChallanService {
 
       return tx.salesChallan.update({
         where: { id: challanId },
-        data: { status: 'CONFIRMED' },
+        data: { status: ChallanStatus.CONFIRMED },
         include: {
           customer: true,
           createdBy: { select: { id: true, name: true, role: true } },
@@ -271,13 +272,13 @@ export class ChallanService {
       throw new AppError(404, 'Sales Challan not found');
     }
 
-    if (data.status === 'CONFIRMED' && existing.status === 'DRAFT') {
+    if (data.status === ChallanStatus.CONFIRMED && existing.status === ChallanStatus.DRAFT) {
       return ChallanService.confirmChallan(id, userId);
     }
 
-    if (data.status === 'CANCELLED' && existing.status !== 'CANCELLED') {
+    if (data.status === ChallanStatus.CANCELLED && existing.status !== ChallanStatus.CANCELLED) {
       return prisma.$transaction(async (tx) => {
-        if (existing.status === 'CONFIRMED') {
+        if (existing.status === ChallanStatus.CONFIRMED) {
           for (const item of existing.items) {
             await tx.product.update({
               where: { id: item.productId },
@@ -298,13 +299,13 @@ export class ChallanService {
 
         return tx.salesChallan.update({
           where: { id },
-          data: { status: 'CANCELLED' },
+          data: { status: ChallanStatus.CANCELLED },
           include: { customer: true, items: true },
         });
       });
     }
 
-    if (existing.status !== 'DRAFT') {
+    if (existing.status !== ChallanStatus.DRAFT) {
       throw new AppError(400, 'Only DRAFT challans can be edited');
     }
 
