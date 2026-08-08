@@ -1,0 +1,19 @@
+{
+  "name": "mini-erp-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mini ERP + CRM Monorepo",
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:server && npm run build:client",
+    "seed": "npm --prefix server run seed",
+    "test": "npm --prefix server test"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ]
+}
