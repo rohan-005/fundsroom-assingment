@@ -9,10 +9,25 @@ import challanRoutes from './routes/challan.routes';
 
 const app: Express = express();
 
-app.use(cors({
-  origin: env.CORS_ORIGIN,
-  credentials: true,
-}));
+const allowedOrigins = [
+  env.CORS_ORIGIN,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || env.CORS_ORIGIN === '*') {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive for local dev
+      }
+    },
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

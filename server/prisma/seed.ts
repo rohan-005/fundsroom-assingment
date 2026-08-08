@@ -56,63 +56,11 @@ async function main() {
 
   console.log('✅ Users seeded: Admin, Sales, Warehouse, Accounts');
 
-  // 2. Create Customers
-  const customer1 = await prisma.customer.create({
-    data: {
-      name: 'Apex Industrial Solutions',
-      mobile: '+919876543210',
-      email: 'contact@apexind.com',
-      businessName: 'Apex Industries Pvt Ltd',
-      gstNumber: '27AAAAA0000A1Z5',
-      customerType: CustomerType.Wholesale,
-      address: 'Plot 42, Industrial Area, Sector 18, Pune, MH',
-      status: CustomerStatus.Active,
-      followUpDate: new Date(Date.now() + 86400000 * 3), // 3 days from now
-      notes: 'Key wholesale account for heavy industrial components.',
-      followUps: {
-        create: [
-          {
-            note: 'Initial requirements meeting regarding bulk order Q3.',
-            date: new Date(Date.now() - 86400000 * 2),
-            createdById: salesUser.id,
-          },
-        ],
-      },
-    },
-  });
-
-  const customer2 = await prisma.customer.create({
-    data: {
-      name: 'Metro Tech Supplies',
-      mobile: '+919812345678',
-      email: 'procurement@metrotech.org',
-      businessName: 'Metro Hardware Ltd',
-      gstNumber: '29BBBBA1111B1Z2',
-      customerType: CustomerType.Distributor,
-      address: '104 Trade Center, MG Road, Bengaluru, KA',
-      status: CustomerStatus.Active,
-      notes: 'Regional distributor for electronics hardware.',
-    },
-  });
-
-  const customer3 = await prisma.customer.create({
-    data: {
-      name: 'Rohan Sharma',
-      mobile: '+919988776655',
-      email: 'rohan.sharma@gmail.com',
-      customerType: CustomerType.Retail,
-      address: 'Flat 301, Sunshine Heights, Mumbai, MH',
-      status: CustomerStatus.Lead,
-      followUpDate: new Date(Date.now() + 86400000),
-      notes: 'Inquired about custom assembly parts.',
-    },
-  });
-
-  console.log('✅ Customers seeded');
-
-  // 3. Create Products
-  const prod1 = await prisma.product.create({
-    data: {
+  // 2. Upsert Products
+  const prod1 = await prisma.product.upsert({
+    where: { sku: 'SKU-BRG-050' },
+    update: {},
+    create: {
       productName: 'Heavy Duty Steel Bearing 50mm',
       sku: 'SKU-BRG-050',
       category: 'Bearings & Fasteners',
@@ -123,8 +71,10 @@ async function main() {
     },
   });
 
-  const prod2 = await prisma.product.create({
-    data: {
+  const prod2 = await prisma.product.upsert({
+    where: { sku: 'SKU-VLV-002' },
+    update: {},
+    create: {
       productName: 'Industrial Hydraulic Valve 2-Way',
       sku: 'SKU-VLV-002',
       category: 'Hydraulics',
@@ -135,13 +85,15 @@ async function main() {
     },
   });
 
-  const prod3 = await prisma.product.create({
-    data: {
+  const prod3 = await prisma.product.upsert({
+    where: { sku: 'SKU-GSK-100' },
+    update: {},
+    create: {
       productName: 'High Temp Thermal Gasket Pack',
       sku: 'SKU-GSK-100',
       category: 'Seals & Gaskets',
       unitPrice: 180.00,
-      currentStock: 4, // Low stock warning level
+      currentStock: 4,
       minimumStock: 10,
       warehouseLocation: 'Aisle 4, Bin 12',
     },
@@ -149,91 +101,52 @@ async function main() {
 
   console.log('✅ Products seeded');
 
-  // 4. Create Initial Stock Movements (IN)
-  await prisma.stockMovement.createMany({
-    data: [
-      {
-        productId: prod1.id,
-        quantity: 100,
-        movementType: MovementType.IN,
-        reason: 'Initial stock intake from factory batch #882',
-        createdById: warehouseUser.id,
+  // 3. Upsert Customers
+  let customer1 = await prisma.customer.findFirst({ where: { email: 'contact@apexind.com' } });
+  if (!customer1) {
+    customer1 = await prisma.customer.create({
+      data: {
+        name: 'Apex Industrial Solutions',
+        mobile: '+919876543210',
+        email: 'contact@apexind.com',
+        businessName: 'Apex Industries Pvt Ltd',
+        gstNumber: '27AAAAA0000A1Z5',
+        customerType: CustomerType.Wholesale,
+        address: 'Plot 42, Industrial Area, Sector 18, Pune, MH',
+        status: CustomerStatus.Active,
+        followUpDate: new Date(Date.now() + 86400000 * 3),
+        notes: 'Key wholesale account for heavy industrial components.',
+        followUps: {
+          create: [
+            {
+              note: 'Initial requirements meeting regarding bulk order Q3.',
+              date: new Date(Date.now() - 86400000 * 2),
+              createdById: salesUser.id,
+            },
+          ],
+        },
       },
-      {
-        productId: prod2.id,
-        quantity: 25,
-        movementType: MovementType.IN,
-        reason: 'Initial stock intake from supplier invoice #441',
-        createdById: warehouseUser.id,
+    });
+  }
+
+  let customer2 = await prisma.customer.findFirst({ where: { email: 'procurement@metrotech.org' } });
+  if (!customer2) {
+    customer2 = await prisma.customer.create({
+      data: {
+        name: 'Metro Tech Supplies',
+        mobile: '+919812345678',
+        email: 'procurement@metrotech.org',
+        businessName: 'Metro Hardware Ltd',
+        gstNumber: '29BBBBA1111B1Z2',
+        customerType: CustomerType.Distributor,
+        address: '104 Trade Center, MG Road, Bengaluru, KA',
+        status: CustomerStatus.Active,
+        notes: 'Regional distributor for electronics hardware.',
       },
-      {
-        productId: prod3.id,
-        quantity: 4,
-        movementType: MovementType.IN,
-        reason: 'Sample batch receipt',
-        createdById: warehouseUser.id,
-      },
-    ],
-  });
+    });
+  }
 
-  console.log('✅ Stock Movements seeded');
-
-  // 5. Create Sample Sales Challans
-  const challan1 = await prisma.salesChallan.create({
-    data: {
-      challanNumber: 'CH-2026-0001',
-      customerId: customer1.id,
-      status: ChallanStatus.CONFIRMED,
-      totalQuantity: 10,
-      createdById: salesUser.id,
-      items: {
-        create: [
-          {
-            productId: prod1.id,
-            quantity: 10,
-            unitPrice: 450.00,
-            productNameSnapshot: prod1.productName,
-            skuSnapshot: prod1.sku,
-          },
-        ],
-      },
-    },
-  });
-
-  // Outward stock movement for confirmed challan
-  await prisma.stockMovement.create({
-    data: {
-      productId: prod1.id,
-      quantity: 10,
-      movementType: MovementType.OUT,
-      reason: `Challan Dispatch: ${challan1.challanNumber}`,
-      createdById: salesUser.id,
-    },
-  });
-
-  // Draft Challan
-  await prisma.salesChallan.create({
-    data: {
-      challanNumber: 'CH-2026-0002',
-      customerId: customer2.id,
-      status: ChallanStatus.DRAFT,
-      totalQuantity: 5,
-      createdById: salesUser.id,
-      items: {
-        create: [
-          {
-            productId: prod2.id,
-            quantity: 5,
-            unitPrice: 1250.50,
-            productNameSnapshot: prod2.productName,
-            skuSnapshot: prod2.sku,
-          },
-        ],
-      },
-    },
-  });
-
-  console.log('✅ Sales Challans seeded');
+  console.log('✅ Customers seeded');
   console.log('🎉 Database seeding complete!');
 }
 
