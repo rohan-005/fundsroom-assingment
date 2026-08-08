@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.routes';
 import customerRoutes from './routes/customer.routes';
 import productRoutes from './routes/product.routes';
 import stockRoutes from './routes/stock.routes';
+import challanRoutes from './routes/challan.routes';
 
 const app: Express = express();
 
@@ -21,6 +22,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/stock-movements', stockRoutes);
+app.use('/api/challans', challanRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req: Request, res: Response) => {
